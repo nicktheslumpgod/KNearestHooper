@@ -1,0 +1,14 @@
+# Core data processing and machine learning
+pandas>=1.5.0
+numpy>=1.23.0
+scikit-learn>=1.2.0
+matplotlib>=3.7.0
+
+# Web framework and server
+fastapi>=0.95.0
+uvicorn[standard]>=0.22.0
+python-multipart>=0.0.5
+pydantic>=2.0.0
+
+# Utilities
+python-dotenv>=1.0.0
