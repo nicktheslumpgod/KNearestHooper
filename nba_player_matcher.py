@@ -445,27 +445,27 @@ class EnhancedNBAPlayerMatcher:
                     
                     # Set weight based on intensity (higher intensity = higher weight)
                     intensity_weight = {
-                        "none": 0.1,  # Almost ignore
-                        "low": 0.4,   # Give some importance
-                        "medium": 0.7, # Moderate importance
+                        "none": 0.7,  # Almost ignore
+                        "low": 0.7,   # Give some importance
+                        "medium": 0.8, # Moderate importance
                         "high": 1.0    # High importance
                     }
                     feature_weights[zone_name] = intensity_weight.get(intensity, 0.1)
                 else:
                     # Simple linear scaling if percentiles not available
                     intensity_value = {
-                        "none": 0, 
-                        "low": 33, 
-                        "medium": 67, 
+                        "none": 70, 
+                        "low": 70, 
+                        "medium": 80, 
                         "high": 100
                     }.get(intensity, 0)
                     zone_features[zone_name] = float(intensity_value)
                     
                     # Set weight based on intensity
                     intensity_weight = {
-                        "none": 0.1,
-                        "low": 0.4,
-                        "medium": 0.7,
+                        "none": 0.7,
+                        "low": 0.7,
+                        "medium": 0.8,
                         "high": 1.0
                     }
                     feature_weights[zone_name] = intensity_weight.get(intensity, 0.1)
