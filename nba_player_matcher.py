@@ -1019,148 +1019,146 @@ def create_api():
     import traceback
     import os
     
+    print("Creating FastAPI app instance...")
     app = FastAPI(title="Enhanced NBA Player Shot Profile Matcher with PCA")
     
-    # Add CORS middleware
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["https://qiwens-dapper-site.webflow.io", "http://localhost:3000", "*"],
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "OPTIONS"],
-        allow_headers=["*"],
-    )
-    
-    # Mount the static files directory for player images
-    static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Player Pictures")
-    if os.path.exists(static_dir):
-        app.mount("/images", StaticFiles(directory=static_dir), name="player_images")
-    else:
-        print(f"Warning: Player images directory not found at {static_dir}")
-    
-    class PlayerHeight(BaseModel):
-        height: str = Field(..., description="Player height (short, average, tall)")
-    
-    class PlayerData(BaseModel):
-        player: PlayerHeight
-        shots: Dict[str, int] = Field(default_factory=dict, description="Shot type preferences (0-5 scale)")
-        zones: Dict[str, str] = Field(default_factory=dict, description="Court zone preferences (none, low, medium, high)")
-    
-    # Initialize the matcher (loaded once when the server starts)
-    player_matcher = None
-    
-    @app.on_event("startup")
-    async def startup_event():
-        nonlocal player_matcher
+    try:
+        # Add CORS middleware
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["https://qiwens-dapper-site.webflow.io", "http://localhost:3000", "*"],
+            allow_credentials=True,
+            allow_methods=["GET", "POST", "OPTIONS"],
+            allow_headers=["*"],
+        )
+        
+        # Try to mount static files directory if it exists
         try:
-            # Try to load the data - with verbose error reporting
-            print("Starting matcher initialization...")
-            
-            import os
-            
-            # Get data directory from environment variable or use current directory
-            data_dir = os.environ.get("DATA_DIR", os.path.dirname(os.path.abspath(__file__)))
-            
-            # Construct paths to data files
-            data_path = os.path.join(data_dir, "complete_df.csv")
-            percentile_path = os.path.join(data_dir, "percentiles.json")
-            
-            # Check if data files exist
-            if not os.path.exists(data_path):
-                print(f"ERROR: Data file not found: {data_path}")
-                # Try to find alternative files
-                csv_files = [f for f in os.listdir(data_dir) if f.endswith('.csv')]
-                print(f"Available CSV files: {csv_files}")
-                
-                if csv_files:
-                    alternative_path = os.path.join(data_dir, csv_files[0])
-                    print(f"Using alternative data file: {alternative_path}")
-                    data_path = alternative_path
+            static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Player Pictures")
+            if os.path.exists(static_dir):
+                app.mount("/images", StaticFiles(directory=static_dir), name="player_images")
+                print(f"Mounted player images directory: {static_dir}")
             else:
-                print(f"Found data file: {data_path}")
-            
-            # Initialize the matcher with PCA
-            player_matcher = EnhancedNBAPlayerMatcher(
-                data_path=data_path,
-                percentile_path=percentile_path if os.path.exists(percentile_path) else None,
-                pca_variance_threshold=0.95,
-                use_pca=True
-            )
-            
-            # Log success
-            print(f"Enhanced NBA Player Matcher initialized successfully with {len(player_matcher.player_data)} players")
-            
-            # Print PCA information
-            if player_matcher.use_pca:
-                print(f"PCA: Shot types using {player_matcher.n_shot_components} components " +
-                      f"(variance: {player_matcher.shot_type_pca.explained_variance_ratio_[:player_matcher.n_shot_components].sum()*100:.2f}%)")
-                print(f"PCA: Zones using {player_matcher.n_zone_components} components " +
-                      f"(variance: {player_matcher.zone_pca.explained_variance_ratio_[:player_matcher.n_zone_components].sum()*100:.2f}%)")
+                print(f"Player images directory not found at {static_dir}")
+        except Exception as e:
+            print(f"Error mounting static files: {str(e)}")
+        
+        class PlayerHeight(BaseModel):
+            height: str = Field(..., description="Player height (short, average, tall)")
+        
+        class PlayerData(BaseModel):
+            player: PlayerHeight
+            shots: Dict[str, int] = Field(default_factory=dict, description="Shot type preferences (0-5 scale)")
+            zones: Dict[str, str] = Field(default_factory=dict, description="Court zone preferences (none, low, medium, high)")
+        
+        # Initialize the matcher (loaded once when the server starts)
+        player_matcher = None
+        
+        @app.on_event("startup")
+        async def startup_event():
+            nonlocal player_matcher
+            try:
+                # Try to load the data - with verbose error reporting
+                print("Starting matcher initialization...")
                 
-        except Exception as e:
-            print(f"ERROR initializing Enhanced NBA Player Matcher: {str(e)}")
-            traceback.print_exc()
-    
-    # Simple health check endpoint
-    @app.get("/")
-    async def root():
-        return {
-            "status": "Enhanced API with PCA is running",
-            "matcher_initialized": player_matcher is not None,
-            "player_count": len(player_matcher.player_data) if player_matcher is not None else 0,
-            "pca_enabled": player_matcher.use_pca if player_matcher is not None else False,
-            "pca_components": {
-                "shot_types": player_matcher.n_shot_components if player_matcher is not None and player_matcher.use_pca else None,
-                "zones": player_matcher.n_zone_components if player_matcher is not None and player_matcher.use_pca else None
+                # Get data directory from environment variable or use current directory
+                data_dir = os.environ.get("DATA_DIR", ".")
+                print(f"Looking for data in: {data_dir}")
+                
+                # Try multiple possible data paths
+                possible_data_paths = [
+                    os.path.join(data_dir, "complete_df.csv"),
+                    os.path.join(data_dir, "refined_df.csv"),
+                    os.path.join(".", "refined_df.csv"),
+                    "refined_df.csv"
+                ]
+                
+                # Find first existing data file
+                data_path = None
+                for path in possible_data_paths:
+                    if os.path.exists(path):
+                        data_path = path
+                        print(f"Found data file: {data_path}")
+                        break
+                
+                if data_path is None:
+                    print("ERROR: Could not find any data file!")
+                    # List directory contents for debugging
+                    print(f"Current directory contents: {os.listdir('.')}")
+                    if os.path.exists(data_dir):
+                        print(f"Data directory contents: {os.listdir(data_dir)}")
+                    raise FileNotFoundError("No data file found")
+                
+                # Try to find percentiles file
+                percentile_path = os.path.join(data_dir, "percentiles.json")
+                if not os.path.exists(percentile_path):
+                    percentile_path = None
+                    print("Percentiles file not found - will use default scaling")
+                
+                # Initialize the matcher with PCA
+                player_matcher = EnhancedNBAPlayerMatcher(
+                    data_path=data_path,
+                    percentile_path=percentile_path,
+                    pca_variance_threshold=0.95,
+                    use_pca=True
+                )
+                
+                print(f"Matcher initialized with {len(player_matcher.player_data)} players")
+                
+            except Exception as e:
+                print(f"ERROR initializing matcher: {str(e)}")
+                traceback.print_exc()
+        
+        # Simple health check endpoint
+        @app.get("/")
+        async def root():
+            return {
+                "status": "API is running",
+                "matcher_initialized": player_matcher is not None,
+                "player_count": len(player_matcher.player_data) if player_matcher is not None else 0
             }
-        }
+        
+        @app.post("/api/match-player")
+        async def match_player(data: PlayerData):
+            """Match a player based on their shot profile"""
+            if player_matcher is None:
+                raise HTTPException(status_code=500, detail="NBA Player Matcher not initialized")
+            
+            try:
+                # Use model_dump() for Pydantic v2
+                api_data = data.model_dump()
+                
+                # Process the request
+                result = player_matcher.match_player(api_data)
+                
+                # Convert NumPy types
+                result = convert_numpy_types(result)
+                
+                return result
+                
+            except Exception as e:
+                error_trace = traceback.format_exc()
+                print(f"Error matching player: {str(e)}")
+                print(error_trace)
+                
+                # Return error response
+                error_content = convert_numpy_types({
+                    "detail": f"Error matching player: {str(e)}",
+                    "error_trace": error_trace,
+                    "matches": []
+                })
+                
+                return JSONResponse(
+                    status_code=500,
+                    content=error_content
+                )
     
-    @app.post("/api/match-player")
-    async def match_player(data: PlayerData):
-        """
-        Match a player based on their shot profile with PCA dimensionality reduction and improved weighting.
-        
-        This endpoint takes a player's profile (height, shot types, and court zones),
-        applies PCA dimensionality reduction, and returns the NBA players who most 
-        closely match this profile using an enhanced weighted algorithm.
-        """
-        if player_matcher is None:
-            raise HTTPException(status_code=500, detail="NBA Player Matcher not initialized")
-        
-        try:
-            # Use model_dump() instead of dict() for Pydantic v2
-            api_data = data.model_dump()
-            
-            # Log the incoming request
-            print(f"Received match request: {json.dumps(api_data, indent=2)}")
-            
-            # Process the request
-            result = player_matcher.match_player(api_data)
-            
-            # Convert NumPy types to Python native types
-            result = convert_numpy_types(result)
-            
-            # Log success
-            match_count = len(result.get("matches", []))
-            print(f"Successfully matched player with {match_count} results")
-            
-            return result
-            
-        except Exception as e:
-            error_trace = traceback.format_exc()
-            print(f"Error matching player: {str(e)}")
-            print(error_trace)
-            
-            # Return a more helpful error response with converted types
-            error_content = convert_numpy_types({
-                "detail": f"Error matching player: {str(e)}",
-                "error_trace": error_trace,
-                "matches": []
-            })
-            
-            return JSONResponse(
-                status_code=500,
-                content=error_content
-            )
+    except Exception as e:
+        print(f"ERROR in create_api: {str(e)}")
+        traceback.print_exc()
+    
+    print("Returning FastAPI app instance")
+    return app
 
 
 # Example usage

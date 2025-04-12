@@ -1,21 +1,21 @@
 import os
-import sys
 import traceback
 
+# Import the API creation function
 try:
+    print("Importing nba_player_matcher...")
     from nba_player_matcher import create_api, convert_numpy_types
     
-    # Get the FastAPI application
+    # Create the FastAPI application
+    print("Creating FastAPI app...")
     app = create_api()
     
-    # Make sure app is not None
-    if app is None:
-        raise ValueError("ERROR: create_api() returned None instead of a FastAPI app instance")
-        
+    # For debugging
+    print(f"App type: {type(app)}")
+    
     # This conditional ensures the server only starts when this file is run directly
     if __name__ == "__main__":
         import uvicorn
-        
         # Get port from environment variable or default to 8000
         port = int(os.environ.get("PORT", 8000))
         
@@ -26,11 +26,10 @@ try:
         # Start the API server with uvicorn
         uvicorn.run(
             app, 
-            host="0.0.0.0",
+            host="0.0.0.0",  # Bind to all available network interfaces
             port=port,
             log_level="info"
         )
 except Exception as e:
-    print(f"CRITICAL ERROR initializing app: {str(e)}")
+    print(f"CRITICAL ERROR in main.py: {str(e)}")
     traceback.print_exc()
-    sys.exit(1)
