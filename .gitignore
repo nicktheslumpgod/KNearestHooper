@@ -32,12 +32,12 @@ ENV/
 *.swo
 
 # Project-specific
-#data/*.csv
-#data/*.json
-#!data/README.md
-#*.log
-#.DS_Store
+data/*.csv
+data/*.json
+!data/README.md
+*.log
+.DS_Store
 
 # Large files that should be stored elsewhere
-#Player Pictures/*
-#!Player Pictures/README.md
+Player Pictures/*
+!Player Pictures/README.md
