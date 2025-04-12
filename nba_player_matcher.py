@@ -5,7 +5,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import json
-from typing import Dict, List, Optional, Union, Tuple
+from typing import Dict, List, Optional, Union, Tuple, Any
 import os
 import re
 
@@ -919,6 +919,10 @@ class EnhancedNBAPlayerMatcher:
             
             # Find similar players using weighted similarity - pass api_data
             result = self.find_similar_players(user_features, feature_weights, api_data, n_matches)
+
+            # Convert NumPy types to native Python types before returning
+            result = convert_numpy_types(result)
+
             
             # Log match results count
             print(f"Found {len(result.get('matches', []))} matches")
@@ -929,7 +933,7 @@ class EnhancedNBAPlayerMatcher:
             print(f"Error in match_player: {str(e)}")
             import traceback
             traceback.print_exc()
-            return {
+            error_result = {
                 "error": str(e),
                 "matches": [],
                 "debug_info": {
@@ -937,7 +941,32 @@ class EnhancedNBAPlayerMatcher:
                     "api_data": api_data
                 }
             }
+        
+            return convert_numpy_types(error_result)  # Also convert error response
 
+#helper function to to convert numpt types to native python for JSON serialization
+def convert_numpy_types(obj):
+    """
+    Recursively convert numpy types to native Python types for JSON serialization.
+    """
+    import numpy as np
+    
+    if isinstance(obj, dict):
+        return {key: convert_numpy_types(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_types(item) for item in obj]
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return convert_numpy_types(obj.tolist())
+    elif isinstance(obj, np.bool_):
+        return bool(obj)
+    elif isinstance(obj, (np.generic)):
+        return obj.item()
+    else:
+        return obj
 
 # Helper function to create percentile dictionary from dataframe
 def create_percentile_dict(df: pd.DataFrame) -> Dict:
@@ -1107,6 +1136,9 @@ def create_api():
             # Process the request
             result = player_matcher.match_player(api_data)
             
+            # Convert NumPy types to Python native types
+            result = convert_numpy_types(result)
+            
             # Log success
             match_count = len(result.get("matches", []))
             print(f"Successfully matched player with {match_count} results")
@@ -1118,17 +1150,17 @@ def create_api():
             print(f"Error matching player: {str(e)}")
             print(error_trace)
             
-            # Return a more helpful error response
+            # Return a more helpful error response with converted types
+            error_content = convert_numpy_types({
+                "detail": f"Error matching player: {str(e)}",
+                "error_trace": error_trace,
+                "matches": []
+            })
+            
             return JSONResponse(
                 status_code=500,
-                content={
-                    "detail": f"Error matching player: {str(e)}",
-                    "error_trace": error_trace,
-                    "matches": []
-                }
+                content=error_content
             )
-    
-    return app
 
 
 # Example usage
