@@ -10,8 +10,8 @@ app = create_api()
 
 # This conditional ensures the server only starts when this file is run directly
 if __name__ == "__main__":
-    # Get port from environment variable or default to 8000
-    port = int(os.environ.get("PORT", 8000))
+    # Get port from environment variable or default to 10000 (Render's default port)
+    port = int(os.environ.get("PORT", 10000))
     
     # Print startup information
     print(f"Starting NBA Player Shot Profile Matcher API on port {port}")

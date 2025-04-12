@@ -9,6 +9,29 @@ from typing import Dict, List, Optional, Union, Tuple, Any
 import os
 import re
 
+#helper function to to convert numpt types to native python for JSON serialization
+def convert_numpy_types(obj):
+    """
+    Recursively convert numpy types to native Python types for JSON serialization.
+    """
+    import numpy as np
+    
+    if isinstance(obj, dict):
+        return {key: convert_numpy_types(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_types(item) for item in obj]
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return convert_numpy_types(obj.tolist())
+    elif isinstance(obj, np.bool_):
+        return bool(obj)
+    elif isinstance(obj, (np.generic)):
+        return obj.item()
+    else:
+        return obj
 
 class EnhancedNBAPlayerMatcher:
     """
@@ -944,29 +967,6 @@ class EnhancedNBAPlayerMatcher:
         
             return convert_numpy_types(error_result)  # Also convert error response
 
-#helper function to to convert numpt types to native python for JSON serialization
-def convert_numpy_types(obj):
-    """
-    Recursively convert numpy types to native Python types for JSON serialization.
-    """
-    import numpy as np
-    
-    if isinstance(obj, dict):
-        return {key: convert_numpy_types(value) for key, value in obj.items()}
-    elif isinstance(obj, list):
-        return [convert_numpy_types(item) for item in obj]
-    elif isinstance(obj, np.integer):
-        return int(obj)
-    elif isinstance(obj, np.floating):
-        return float(obj)
-    elif isinstance(obj, np.ndarray):
-        return convert_numpy_types(obj.tolist())
-    elif isinstance(obj, np.bool_):
-        return bool(obj)
-    elif isinstance(obj, (np.generic)):
-        return obj.item()
-    else:
-        return obj
 
 # Helper function to create percentile dictionary from dataframe
 def create_percentile_dict(df: pd.DataFrame) -> Dict:
