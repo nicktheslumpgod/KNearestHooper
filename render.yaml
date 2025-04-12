@@ -13,6 +13,16 @@ services:
         value: .
       - key: BASE_URL
         value: ${RENDER_EXTERNAL_URL}
+    headers:
+      - path: /*
+        name: Access-Control-Allow-Origin
+        value: https://qiwens-dapper-site.webflow.io
+      - path: /*
+        name: Access-Control-Allow-Methods
+        value: GET, POST, OPTIONS
+      - path: /*
+        name: Access-Control-Allow-Headers
+        value: Content-Type, Authorization
     routes:
       - type: cors
         source: /*

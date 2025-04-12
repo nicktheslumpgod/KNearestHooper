@@ -1026,10 +1026,12 @@ def create_api():
         # Add CORS middleware
         app.add_middleware(
             CORSMiddleware,
-            allow_origins=["https://qiwens-dapper-site.webflow.io", "http://localhost:3000", "*"],
+            allow_origins=["https://qiwens-dapper-site.webflow.io"],
             allow_credentials=True,
             allow_methods=["GET", "POST", "OPTIONS"],
             allow_headers=["*"],
+            expose_headers=["*"],
+            max_age=600,
         )
         
         # Try to mount static files directory if it exists
